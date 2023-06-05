@@ -7,12 +7,34 @@ import logging
 
 
 class Cell(QWidget):
+    """
+    The Cell class represents a cell widget that will be displayed in the table.
+
+    Attributes:
+        color (str): The color of the cell.
+        free (bool): Flag indicating whether the cell is free.
+    """
+
     def __init__(self, color, free=True, parent=None):
+        """
+        Initialize the Cell object.
+
+        Args:
+            color (str): The color of the cell.
+            free (bool, optional): Flag indicating whether the cell is free. Defaults to True.
+            parent (QWidget, optional): The parent widget. Defaults to None.
+        """
         super().__init__(parent)
         self.color = color
         self.free = free
 
     def paintEvent(self, event):
+        """
+        Event handler for painting the cell.
+
+        Args:
+            event (QPaintEvent): The paint event.
+        """
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setBrush(QBrush(QColor(self.color)))
@@ -20,24 +42,64 @@ class Cell(QWidget):
 
 
 class Gateway(QObject):
+    """
+    The Gateway class represents a signal object that serves as a gateway for value transmission.
+
+    Signals:
+        valueChanged (int): The signal emitted when the value changes.
+
+    Attributes:
+        value (int): The current value of the gateway.
+    """
+
     valueChanged = pyqtSignal(int)
 
     def __init__(self, parent=None):
+        """
+        Initialize the Gateway object.
+
+        Args:
+            parent (QObject, optional): The parent object. Defaults to None.
+        """
         super().__init__(parent)
         self._value = 0
 
     @property
     def value(self):
+        """
+        Getter for the value of the gateway.
+
+        Returns:
+            int: The current value of the gateway.
+        """
         return self._value
 
     @value.setter
     def value(self, new_value):
+        """
+        Setter for the value of the gateway.
+
+        Args:
+            new_value (int): The new value of the gateway.
+        """
         self._value = new_value
         self.valueChanged.emit(new_value)
 
 
 class MainWindow(QMainWindow):
+    """
+    The MainWindow class represents the main application window.
+
+    Attributes:
+        light_theme_color (str): The color for the light theme.
+        dark_theme_color (str): The color for the dark theme.
+        empty_cell_color (str): The color of the empty cell.
+    """
+
     def __init__(self):
+        """
+        Initialize the MainWindow object.
+        """
         super().__init__()
         self.setWindowTitle('Color Coded Gateway')
 
@@ -54,6 +116,9 @@ class MainWindow(QMainWindow):
                             format='%(asctime)s - %(levelname)s - %(message)s')
 
     def setup_ui(self):
+        """
+        Set up the user interface.
+        """
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
@@ -79,8 +144,8 @@ class MainWindow(QMainWindow):
         self.table_layout = QGridLayout(self.table_container)
         table_container_layout.addLayout(self.table_layout)
 
-        self.table_layout.setHorizontalSpacing(0)  # Убираем горизонтальные промежутки
-        self.table_layout.setVerticalSpacing(0)  # Убираем вертикальные промежутки
+        self.table_layout.setHorizontalSpacing(0)  # Remove horizontal spacing
+        self.table_layout.setVerticalSpacing(0)  # Remove vertical spacing
 
         self.numeric_layout = QHBoxLayout()
         self.numeric_frame = QWidget()
@@ -103,16 +168,34 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.table_container)
         main_layout.addWidget(self.numeric_frame)
         main_layout.addStretch()
-        self.calculate_conditional_code()
+        self.create_table()
 
     def setup_connections(self):
+        """
+        Set up signal-slot connections.
+        """
         calculate_button = self.findChild(QPushButton, 'calculateButton')
         if calculate_button:
             calculate_button.clicked.connect(self.calculate_conditional_code)
 
         self.theme_switch_button.clicked.connect(self.toggle_theme)
 
+    def create_table(self):
+        """
+        Create an empty table for the code.
+        """
+        for i in range(4):
+            for j in range(4):
+                empty_cell = Cell(self.empty_cell_color)
+                self.table_layout.addWidget(empty_cell, i, j)
+            self.table_layout.setColumnMinimumWidth(i, 80)
+            self.table_layout.setRowMinimumHeight(i, 80)
+
+
     def calculate_conditional_code(self):
+        """
+        Handle the "Calculate" button click event.
+        """
         try:
             gateway_number = self.entry.value()
 
@@ -132,12 +215,7 @@ class MainWindow(QMainWindow):
                 if widget:
                     widget.setParent(None)
 
-            for i in range(4):
-                for j in range(4):
-                    empty_cell = Cell(self.empty_cell_color)
-                    # empty_cell.setMinimumSize(80, 80)
-                    # empty_cell.setMaximumSize(80, 80)
-                    self.table_layout.addWidget(empty_cell, i, j)
+            self.create_table()
 
             count = 0
             remaining_number = gateway_number
@@ -146,11 +224,7 @@ class MainWindow(QMainWindow):
                 cells_to_fill = min(remaining_number // values[j], 4)
                 for i in range(4):
                     cell = Cell(colors[j], False) if i < cells_to_fill else Cell(self.empty_cell_color)
-                    # cell.setMinimumSize(80, 80)
-                    # cell.setMaximumSize(80, 80)
                     self.table_layout.addWidget(cell, i, j)
-                    self.table_layout.setColumnMinimumWidth(j, 80)
-                    self.table_layout.setRowMinimumHeight(i, 80)
                     count += 1
 
                 if cells_to_fill == 4:
@@ -162,9 +236,11 @@ class MainWindow(QMainWindow):
         except ValueError as ve:
             self.error_label.setText(f'Error: {str(ve)}')
             logging.error(f'Error occurred: {str(ve)}')
-        # self.update_table_size()
 
     def toggle_theme(self):
+        """
+        Toggle the application theme.
+        """
         is_dark_theme = self.theme_switch_button.text() == '☀'
         if is_dark_theme:
             self.setStyleSheet('''
@@ -184,6 +260,9 @@ class MainWindow(QMainWindow):
         self.update_empty_cell_color()
 
     def update_empty_cell_color(self):
+        """
+        Update the color of empty cells.
+        """
         for i in range(self.table_layout.count()):
             widget = self.table_layout.itemAt(i).widget()
             if isinstance(widget, Cell):
@@ -192,31 +271,23 @@ class MainWindow(QMainWindow):
                     widget.update()
 
     def showEvent(self, event):
+        """
+        Handle the window show event.
+        """
         super().showEvent(event)
+        logging.info('Application started')
 
     def resizeEvent(self, event):
+        """
+        Handle the window resize event.
+        """
         super().resizeEvent(event)
         self.update_numeric_layout()
-        # self.update_table_size()
-
-    # def update_table_size(self):
-    #     print("\n", self.table_container.size())
-    #     available_width = self.table_container.width()
-    #     available_height = self.table_container.height()
-    #     print(self.table_container.width(), available_width, self.table_container.height(), available_height)
-    #
-    #     max_cell_width = available_width // 4
-    #     max_cell_height = available_height // 4
-    #     cell_size = min(max_cell_width, max_cell_height)
-    #
-    #     for i in range(self.table_layout.count()):
-    #         widget = self.table_layout.itemAt(i).widget()
-    #         if isinstance(widget, Cell):
-    #             widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-    #             # widget.resize(cell_size, cell_size)
-    #             # pass
 
     def update_numeric_layout(self):
+        """
+        Update the layout of numeric labels.
+        """
         first_cell_rect = self.table_layout.cellRect(0, 0)
         last_cell_rect = self.table_layout.cellRect(3, 3)
 
@@ -244,6 +315,13 @@ class MainWindow(QMainWindow):
                 color: {1};
                 font-weight: bold;
             '''.format(self.empty_cell_color, self.dark_theme_color))
+
+    def closeEvent(self, event):
+        """
+        Handle the window close event.
+        """
+        logging.info('Application closed')
+        super().closeEvent(event)
 
 
 if __name__ == '__main__':
