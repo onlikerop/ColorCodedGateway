@@ -1,3 +1,6 @@
+import tkinter as tk
+
+
 def get_conditional_code(gateway_number):
     # Создаем список цветов столбцов
     colors = ['Red', 'Orange', 'Yellow', 'Green']
@@ -15,8 +18,13 @@ def get_conditional_code(gateway_number):
     if gateway_number < min_gateway_number or gateway_number > max_gateway_number:
         raise ValueError(f'Номер шлюза должен быть в диапазоне от {min_gateway_number} до {max_gateway_number}')
 
-    # Создаем пустую таблицу 4x4
-    table = [[' ' for _ in range(4)] for _ in range(4)]
+    # Создаем графический интерфейс
+    window = tk.Tk()
+    window.title('Условное обозначение')
+
+    # Создаем таблицу 4x4
+    table_frame = tk.Frame(window)
+    table_frame.pack()
 
     # Заполняем таблицу столбцами согласно условиям
     count = 0  # Счетчик для отслеживания текущего номера шлюза
@@ -24,7 +32,8 @@ def get_conditional_code(gateway_number):
         # Вычисляем количество ячеек, которые нужно заполнить в текущем столбце
         cells_to_fill = min(gateway_number // values[j], 4)
         for i in range(cells_to_fill):
-            table[i][j] = colors[j]
+            cell_label = tk.Label(table_frame, text=colors[j], width=10, height=2, relief='solid')
+            cell_label.grid(row=i, column=j)
             count += 1
             if count == gateway_number:
                 break
@@ -33,18 +42,16 @@ def get_conditional_code(gateway_number):
         else:
             gateway_number = gateway_number % values[j]  # Обновляем значение шлюза после заполнения столбца
 
-    # Выводим условное обозначение
-    print('Условное обозначение для шлюза', gateway_number, ':\n')
-    for row in table:
-        print('|', end='')
-        for cell in row:
-            print('{:^10}'.format(cell), end='|')
-        print('\n' + '-' * 47)
-
     # Выводим числовое представление
-    print('\nЧисловое представление:')
+    numeric_frame = tk.Frame(window)
+    numeric_frame.pack()
+
     for i in range(4):
-        print(colors[i] + ':', values[i])
+        numeric_label = tk.Label(numeric_frame, text=colors[i] + ': ' + str(values[i]), width=20, height=2)
+        numeric_label.pack()
+
+    # Запускаем главный цикл отображения графического интерфейса
+    window.mainloop()
 
 
 # Пример вызова функции для шлюза
