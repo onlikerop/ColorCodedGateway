@@ -1,98 +1,104 @@
-import tkinter as tk
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QGridLayout
+from PyQt6.QtCore import Qt
+import sys
 
 
-def calculate_conditional_code():
-    try:
-        gateway_number = int(entry.get())
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle('Отображение порта')
+        self.setFixedSize(400, 300)
+        self.setup_ui()
 
-        # Создаем список цветов столбцов
-        colors = ['red', 'orange', 'yellow', 'green']
+    def setup_ui(self):
+        main_widget = QWidget()
+        self.setCentralWidget(main_widget)
+        main_layout = QVBoxLayout(main_widget)
 
-        # Создаем список значений столбцов
-        values = [50, 10, 5, 1]
+        input_layout = QHBoxLayout()
+        gateway_label = QLabel('Номер шлюза:')
+        self.entry = QLineEdit()
+        calculate_button = QPushButton('Рассчитать')
+        self.error_label = QLabel()
 
-        # Проверка на минимально и максимально допустимые номера портов
-        min_gateway_number = 1
-        max_gateway_number = 264
-        if gateway_number < min_gateway_number or gateway_number > max_gateway_number:
-            raise ValueError(f'Номер шлюза должен быть в диапазоне от {min_gateway_number} до {max_gateway_number}')
+        input_layout.addWidget(gateway_label)
+        input_layout.addWidget(self.entry)
+        input_layout.addWidget(calculate_button)
 
-        # Очищаем таблицу перед заполнением
-        for cell in table_frame.winfo_children():
-            cell.destroy()
+        self.table_layout = QGridLayout()
+        self.table_widget = QWidget()
+        self.numeric_frame = QWidget()
+        self.numeric_frame.setStyleSheet('background-color: white')
+        self.numeric_frame.setFixedHeight(40)
 
-        # Заполняем таблицу столбцами согласно условиям
-        count = 0  # Счетчик для отслеживания текущего номера шлюза
-        for j in range(4):
-            column_frame = tk.Frame(table_frame, bg='white', bd=0)
-            column_frame.grid(row=0, column=j)
+        main_layout.addLayout(input_layout)
+        main_layout.addWidget(self.error_label)
+        main_layout.addWidget(self.table_widget)
+        main_layout.addWidget(self.numeric_frame)
 
-            # Вычисляем количество ячеек, которые нужно заполнить в текущем столбце
-            cells_to_fill = min(gateway_number // values[j], 4)
-            for i in range(cells_to_fill):
-                cell_label = tk.Label(column_frame, bg=colors[j], width=6, height=3)
-                cell_label.pack(fill=tk.BOTH)
-                count += 1
-                if count == gateway_number:
-                    break
-            if cells_to_fill < 4:  # Добавляем пустые ячейки, если меньше 4 ячеек заполнено
-                for _ in range(4 - cells_to_fill):
-                    empty_cell_label = tk.Label(column_frame, bg='white', width=6, height=3)
-                    empty_cell_label.pack(fill=tk.BOTH)
+        self.table_widget.setLayout(self.table_layout)
 
-            if cells_to_fill == 4:  # Переносим остаток в следующий столбец, если максимальное количество ячеек достигнуто
-                gateway_number -= cells_to_fill * values[j]
-            else:
-                gateway_number = gateway_number % values[j]  # Обновляем значение шлюза после заполнения столбца
+        calculate_button.clicked.connect(self.calculate_conditional_code)
 
-        # Выводим числовое представление
-        numeric_frame = tk.Frame(window, bg='white', bd=0)
-        numeric_frame.pack(pady=10)
+    def calculate_conditional_code(self):
+        try:
+            gateway_number = int(self.entry.text())
 
-        for i in range(4):
-            numeric_label = tk.Label(numeric_frame, text=str(values[i]), width=6, height=3)
-            numeric_label.pack(side=tk.LEFT, padx=10)
+            colors = ['red', 'orange', 'yellow', 'green']
+            values = [50, 10, 5, 1]
 
-        error_label.config(text='')
+            min_gateway_number = 1
+            max_gateway_number = 264
+            if gateway_number < min_gateway_number or gateway_number > max_gateway_number:
+                raise ValueError(f'Номер шлюза должен быть в диапазоне от {min_gateway_number} до {max_gateway_number}')
 
-    except ValueError:
-        error_label.config(text='Ошибка: Некорректный ввод номера шлюза')
+            for i in reversed(range(self.table_layout.count())):
+                self.table_layout.itemAt(i).widget().setParent(None)
+
+            count = 0
+            remaining_number = gateway_number
+            for j in range(4):
+                column_frame = QWidget()
+                column_layout = QVBoxLayout(column_frame)
+
+                cells_to_fill = min(remaining_number // values[j], 4)
+                for i in range(cells_to_fill):
+                    cell_label = QLabel()
+                    cell_label.setStyleSheet(f'background-color: {colors[j]}')
+                    cell_label.setMinimumSize(30, 30)  # Set minimum size for color code cells
+                    column_layout.addWidget(cell_label)
+                    count += 1
+                    if count == gateway_number:
+                        break
+
+                if cells_to_fill < 4:
+                    for _ in range(4 - cells_to_fill):
+                        empty_cell_label = QLabel()
+                        empty_cell_label.setStyleSheet('background-color: white')
+                        column_layout.addWidget(empty_cell_label)
+
+                column_layout.addStretch()
+                self.table_layout.addWidget(column_frame, 0, j)
+
+                remaining_number %= values[j]  # Update the remaining number
+
+            numeric_layout = QHBoxLayout()
+            for i in range(4):
+                numeric_label = QLabel(str(values[i]))
+                numeric_layout.addWidget(numeric_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+            self.numeric_frame.setLayout(numeric_layout)
+
+            self.error_label.setText('')
+
+        except ValueError:
+            self.error_label.setText('Ошибка: Некорректный ввод')
+
+        except Exception as e:
+            self.error_label.setText(f'Ошибка: {str(e)}')
 
 
-# Создаем графический интерфейс
-window = tk.Tk()
-window.title('Условное обозначение по номеру шлюза')
-
-# Рассчитываем размер окна
-element_width = 100
-element_height = 40
-table_width = 4 * element_width
-table_height = 4 * element_height
-
-window_width = max(table_width, element_width)
-window_height = 4 * (element_height + 10) + table_height
-
-window.geometry(f'{window_width}x{window_height}')
-window.resizable(False, False)
-
-# Создаем метку и поле ввода номера шлюза
-gateway_label = tk.Label(window, text='Номер шлюза:', width=element_width, height=2)
-gateway_label.pack()
-
-entry = tk.Entry(window, width=element_width)
-entry.pack()
-
-# Создаем кнопку для расчета
-calculate_button = tk.Button(window, text='Рассчитать', command=calculate_conditional_code, width=element_width, height=2)
-calculate_button.pack()
-
-# Создаем метку для вывода ошибки
-error_label = tk.Label(window, text='', fg='red', width=element_width, height=2)
-error_label.pack()
-
-# Создаем фрейм для отображения таблицы
-table_frame = tk.Frame(window, bg='white', bd=0)
-table_frame.pack(pady=10)
-
-# Запускаем основной цикл программы
-window.mainloop()
+app = QApplication(sys.argv)
+window = MainWindow()
+window.show()
+sys.exit(app.exec())
