@@ -6,7 +6,7 @@ def calculate_conditional_code():
         gateway_number = int(entry.get())
 
         # Создаем список цветов столбцов
-        colors = ['Red', 'Orange', 'Yellow', 'Green']
+        colors = ['red', 'orange', 'yellow', 'green']
 
         # Создаем список значений столбцов
         values = [50, 10, 5, 1]
@@ -30,14 +30,14 @@ def calculate_conditional_code():
             # Вычисляем количество ячеек, которые нужно заполнить в текущем столбце
             cells_to_fill = min(gateway_number // values[j], 4)
             for i in range(cells_to_fill):
-                cell_label = tk.Label(column_frame, text=colors[j], width=10, height=2, relief='solid')
+                cell_label = tk.Label(column_frame, bg=colors[j], width=10, height=2)
                 cell_label.pack()
                 count += 1
                 if count == gateway_number:
                     break
             if cells_to_fill < 4:  # Добавляем пустые ячейки, если меньше 4 ячеек заполнено
                 for _ in range(4 - cells_to_fill):
-                    empty_cell_label = tk.Label(column_frame, text='', width=10, height=2, relief='solid')
+                    empty_cell_label = tk.Label(column_frame, bg='white', width=10, height=2)
                     empty_cell_label.pack()
 
             if cells_to_fill == 4:  # Переносим остаток в следующий столбец, если максимальное количество ячеек достигнуто
@@ -50,7 +50,7 @@ def calculate_conditional_code():
         numeric_frame.pack()
 
         for i in range(4):
-            numeric_label = tk.Label(numeric_frame, text=colors[i] + ': ' + str(values[i]), width=20, height=2)
+            numeric_label = tk.Label(numeric_frame, text=str(values[i]), width=20, height=2)
             numeric_label.pack()
 
     except ValueError:
@@ -59,8 +59,8 @@ def calculate_conditional_code():
 
 # Создаем графический интерфейс
 window = tk.Tk()
-window.title('Условное обозначение')
-window.geometry('400x300')  # Устанавливаем размер окна
+window.title('Условное обозначение по номеру шлюза')
+window.geometry('400x300')
 window.resizable(False, False)  # Запрещаем изменение размера окна
 
 # Создаем метку и поле ввода для номера шлюза
