@@ -1,13 +1,43 @@
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QGridLayout
-from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPainter, QColor, QBrush
+from PyQt6.QtCore import Qt, pyqtSignal, QObject
 import sys
+
+
+class Cell(QWidget):
+    def __init__(self, color, parent=None):
+        super().__init__(parent)
+        self.color = color
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setBrush(QBrush(QColor(self.color)))
+        painter.drawRect(self.rect())
+
+
+class Gateway(QObject):
+    valueChanged = pyqtSignal(int)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._value = 0
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, new_value):
+        self._value = new_value
+        self.valueChanged.emit(new_value)
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Отображение порта')
-        self.setFixedSize(400, 300)
+        self.setFixedSize(400, 400)
         self.setup_ui()
 
     def setup_ui(self):
@@ -26,17 +56,15 @@ class MainWindow(QMainWindow):
         input_layout.addWidget(calculate_button)
 
         self.table_layout = QGridLayout()
-        self.table_widget = QWidget()
+        self.numeric_layout = QHBoxLayout()
         self.numeric_frame = QWidget()
         self.numeric_frame.setStyleSheet('background-color: white')
-        self.numeric_frame.setFixedHeight(40)
 
         main_layout.addLayout(input_layout)
         main_layout.addWidget(self.error_label)
-        main_layout.addWidget(self.table_widget)
+        main_layout.addLayout(self.table_layout)
         main_layout.addWidget(self.numeric_frame)
-
-        self.table_widget.setLayout(self.table_layout)
+        main_layout.addStretch()
 
         calculate_button.clicked.connect(self.calculate_conditional_code)
 
@@ -53,52 +81,46 @@ class MainWindow(QMainWindow):
                 raise ValueError(f'Номер шлюза должен быть в диапазоне от {min_gateway_number} до {max_gateway_number}')
 
             for i in reversed(range(self.table_layout.count())):
-                self.table_layout.itemAt(i).widget().setParent(None)
+                widget = self.table_layout.itemAt(i).widget()
+                if widget:
+                    widget.setParent(None)
 
             count = 0
             remaining_number = gateway_number
+
             for j in range(4):
-                column_frame = QWidget()
-                column_layout = QVBoxLayout(column_frame)
-
                 cells_to_fill = min(remaining_number // values[j], 4)
-                for i in range(cells_to_fill):
-                    cell_label = QLabel()
-                    cell_label.setStyleSheet(f'background-color: {colors[j]}')
-                    cell_label.setMinimumSize(30, 30)  # Set minimum size for color code cells
-                    column_layout.addWidget(cell_label)
+                for i in range(4):
+                    cell = Cell(colors[j]) if i < cells_to_fill else Cell('white')
+                    self.table_layout.addWidget(cell, i, j)
+                    self.table_layout.setColumnMinimumWidth(j, 100)
+                    self.table_layout.setRowMinimumHeight(i, 100)
                     count += 1
-                    if count == gateway_number:
-                        break
 
-                if cells_to_fill < 4:
-                    for _ in range(4 - cells_to_fill):
-                        empty_cell_label = QLabel()
-                        empty_cell_label.setStyleSheet('background-color: white')
-                        column_layout.addWidget(empty_cell_label)
-
-                column_layout.addStretch()
-                self.table_layout.addWidget(column_frame, 0, j)
-
-                remaining_number %= values[j]  # Update the remaining number
-
-            numeric_layout = QHBoxLayout()
-            for i in range(4):
-                numeric_label = QLabel(str(values[i]))
-                numeric_layout.addWidget(numeric_label, alignment=Qt.AlignmentFlag.AlignCenter)
-
-            self.numeric_frame.setLayout(numeric_layout)
+                if cells_to_fill == 4:
+                    remaining_number -= cells_to_fill * values[j]
+                else:
+                    remaining_number = remaining_number % values[j]
 
             self.error_label.setText('')
+        except ValueError as ve:
+            self.error_label.setText(f'Ошибка: {str(ve)}')
 
-        except ValueError:
-            self.error_label.setText('Ошибка: Некорректный ввод')
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.update_numeric_layout()
 
-        except Exception as e:
-            self.error_label.setText(f'Ошибка: {str(e)}')
+    def update_numeric_layout(self):
+        self.numeric_frame.setGeometry(
+            self.table_layout.cellRect(0, 0).left(),
+            self.table_layout.cellRect(0, 0).top(),
+            self.table_layout.cellRect(3, 3).right() - self.table_layout.cellRect(0, 0).left(),
+            self.table_layout.cellRect(3, 3).bottom() - self.table_layout.cellRect(0, 0).top()
+        )
 
 
-app = QApplication(sys.argv)
-window = MainWindow()
-window.show()
-sys.exit(app.exec())
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
