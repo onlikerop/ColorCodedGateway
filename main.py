@@ -17,13 +17,9 @@ def calculate_conditional_code():
         if gateway_number < min_gateway_number or gateway_number > max_gateway_number:
             raise ValueError(f'Номер шлюза должен быть в диапазоне от {min_gateway_number} до {max_gateway_number}')
 
-        # Создаем графический интерфейс
-        window = tk.Tk()
-        window.title('Условное обозначение')
-
-        # Создаем таблицу 4x4
-        table_frame = tk.Frame(window)
-        table_frame.pack()
+        # Очищаем таблицу перед заполнением
+        for cell in table_frame.winfo_children():
+            cell.destroy()
 
         # Заполняем таблицу столбцами согласно условиям
         count = 0  # Счетчик для отслеживания текущего номера шлюза
@@ -49,8 +45,6 @@ def calculate_conditional_code():
             numeric_label = tk.Label(numeric_frame, text=colors[i] + ': ' + str(values[i]), width=20, height=2)
             numeric_label.pack()
 
-        window.mainloop()
-
     except ValueError:
         error_label.config(text='Ошибка: Некорректный ввод номера шлюза')
 
@@ -58,6 +52,7 @@ def calculate_conditional_code():
 # Создаем графический интерфейс
 window = tk.Tk()
 window.title('Условное обозначение')
+window.geometry('400x300')  # Устанавливаем размер окна
 
 # Создаем метку и поле ввода для номера шлюза
 label = tk.Label(window, text='Введите номер шлюза:')
@@ -73,5 +68,9 @@ button.pack()
 # Создаем метку для вывода ошибок
 error_label = tk.Label(window, text='', fg='red')
 error_label.pack()
+
+# Создаем таблицу для отображения условного обозначения
+table_frame = tk.Frame(window)
+table_frame.pack()
 
 window.mainloop()
