@@ -212,8 +212,6 @@ class MainWindow(QMainWindow):
     #     for i in range(self.table_layout.count()):
     #         widget = self.table_layout.itemAt(i).widget()
     #         if isinstance(widget, Cell):
-    #             # widget.setMinimumSize(cell_size, cell_size)
-    #             # widget.setMaximumSize(cell_size, cell_size)
     #             widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
     #             # widget.resize(cell_size, cell_size)
     #             # pass
@@ -228,10 +226,9 @@ class MainWindow(QMainWindow):
         self.numeric_frame.setGeometry(first_cell_rect.left(), first_cell_rect.top(), numeric_frame_width,
                                        numeric_frame_height)
 
-        numeric_layout = QHBoxLayout(self.numeric_frame)
-        numeric_layout.setContentsMargins(0, 0, 0, 0)
-        numeric_layout.setSpacing(0)
-        numeric_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.numeric_layout.setContentsMargins(0, 0, 0, 0)
+        self.numeric_layout.setSpacing(0)
+        self.numeric_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.apply_numeric_style()
 
