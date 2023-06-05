@@ -1,11 +1,9 @@
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QWidget, QGridLayout, QRadioButton, QSpinBox, QFrame
-from PyQt6.QtGui import QPainter, QColor, QBrush, QFont, QIcon, QPalette
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QSpinBox, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, \
+    QGridLayout, QFrame, QSizePolicy
+from PyQt6.QtGui import QPainter, QColor, QBrush
 from PyQt6.QtCore import Qt, pyqtSignal, QObject
 import sys
-
 import logging
-from PyQt6 import QtGui
 
 
 class Cell(QWidget):
@@ -42,18 +40,18 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Color Coded Gateway')
-        self.setFixedSize(350, 425)
 
         self.light_theme_color = '#FFFFFF'
         self.dark_theme_color = '#1C1E22'
-        self.empty_cell_color = self.light_theme_color  # Изначально используем цвет фона светлой темы
+        self.empty_cell_color = self.light_theme_color
+        self.setFixedSize(self.baseSize())
 
         self.setup_ui()
         self.setup_connections()
         self.toggle_theme()
 
-        # Инициализация логгера
-        logging.basicConfig(filename='gateway.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        logging.basicConfig(filename='gateway.log', level=logging.INFO,
+                            format='%(asctime)s - %(levelname)s - %(message)s')
 
     def setup_ui(self):
         main_widget = QWidget()
@@ -63,19 +61,26 @@ class MainWindow(QMainWindow):
         input_layout = QHBoxLayout()
         gateway_label = QLabel('Gateway Number:')
         self.entry = QSpinBox()
-        self.entry.setRange(1, 264)  # Установите диапазон значений
-        self.entry.setValue(1)  # Установите значение по умолчанию
+        self.entry.setRange(1, 264)
+        self.entry.setValue(1)
         calculate_button = QPushButton('Calculate', objectName='calculateButton')
         self.error_label = QLabel()
-        self.error_label.setStyleSheet('color: red;')  # Цвет текста ошибки - красный
+        self.error_label.setStyleSheet('color: red;')
 
         input_layout.addWidget(gateway_label)
         input_layout.addWidget(self.entry)
         input_layout.addWidget(calculate_button)
 
-        self.table_container = QFrame()  # Контейнер для таблицы
-        self.table_container.setFixedSize(320, 320)  # Устанавливаем фиксированную ширину и высоту
+        self.table_container = QFrame()
+        table_container_layout = QVBoxLayout(self.table_container)
+        self.table_container.setMinimumSize(320, 320)
+        self.table_container.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
+        table_container_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.table_layout = QGridLayout(self.table_container)
+        table_container_layout.addLayout(self.table_layout)
+
+        self.table_layout.setHorizontalSpacing(0)  # Убираем горизонтальные промежутки
+        self.table_layout.setVerticalSpacing(0)  # Убираем вертикальные промежутки
 
         self.numeric_layout = QHBoxLayout()
         self.numeric_frame = QWidget()
@@ -98,6 +103,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.table_container)
         main_layout.addWidget(self.numeric_frame)
         main_layout.addStretch()
+        self.calculate_conditional_code()
 
     def setup_connections(self):
         calculate_button = self.findChild(QPushButton, 'calculateButton')
@@ -108,9 +114,8 @@ class MainWindow(QMainWindow):
 
     def calculate_conditional_code(self):
         try:
-            gateway_number = self.entry.value()  # Получаем значение из QSpinBox
+            gateway_number = self.entry.value()
 
-            # Логгирование запроса
             logging.info(f'Gateway calculation request: {gateway_number}')
 
             colors = ['#C00000', '#ED7D31', '#FFC000', '#00B050']
@@ -119,7 +124,8 @@ class MainWindow(QMainWindow):
             min_gateway_number = 1
             max_gateway_number = 264
             if gateway_number < min_gateway_number or gateway_number > max_gateway_number:
-                raise ValueError(f'Gateway number should be in the range of {min_gateway_number} to {max_gateway_number}')
+                raise ValueError(
+                    f'Gateway number should be in the range of {min_gateway_number} to {max_gateway_number}')
 
             for i in reversed(range(self.table_layout.count())):
                 widget = self.table_layout.itemAt(i).widget()
@@ -129,8 +135,8 @@ class MainWindow(QMainWindow):
             for i in range(4):
                 for j in range(4):
                     empty_cell = Cell(self.empty_cell_color)
-                    empty_cell.setMinimumSize(80, 80)  # Устанавливаем минимальные размеры ячейки
-                    empty_cell.setMaximumSize(80, 80)  # Устанавливаем максимальные размеры ячейки
+                    # empty_cell.setMinimumSize(80, 80)
+                    # empty_cell.setMaximumSize(80, 80)
                     self.table_layout.addWidget(empty_cell, i, j)
 
             count = 0
@@ -140,8 +146,8 @@ class MainWindow(QMainWindow):
                 cells_to_fill = min(remaining_number // values[j], 4)
                 for i in range(4):
                     cell = Cell(colors[j], False) if i < cells_to_fill else Cell(self.empty_cell_color)
-                    cell.setMinimumSize(80, 80)  # Устанавливаем минимальные размеры ячейки
-                    cell.setMaximumSize(80, 80)  # Устанавливаем максимальные размеры ячейки
+                    # cell.setMinimumSize(80, 80)
+                    # cell.setMaximumSize(80, 80)
                     self.table_layout.addWidget(cell, i, j)
                     self.table_layout.setColumnMinimumWidth(j, 80)
                     self.table_layout.setRowMinimumHeight(i, 80)
@@ -153,11 +159,10 @@ class MainWindow(QMainWindow):
                     remaining_number = remaining_number % values[j]
 
             self.error_label.setText('')
-
         except ValueError as ve:
             self.error_label.setText(f'Error: {str(ve)}')
-            # Логгирование ошибки
             logging.error(f'Error occurred: {str(ve)}')
+        # self.update_table_size()
 
     def toggle_theme(self):
         is_dark_theme = self.theme_switch_button.text() == '☀'
@@ -176,7 +181,7 @@ class MainWindow(QMainWindow):
             self.empty_cell_color = self.light_theme_color
             self.theme_switch_button.setText('☀')
 
-        self.update_empty_cell_color()  # Обновляем цвет фона пустых ячеек
+        self.update_empty_cell_color()
 
     def update_empty_cell_color(self):
         for i in range(self.table_layout.count()):
@@ -186,17 +191,42 @@ class MainWindow(QMainWindow):
                     widget.color = self.empty_cell_color
                     widget.update()
 
+    def showEvent(self, event):
+        super().showEvent(event)
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.update_numeric_layout()
+        # self.update_table_size()
+
+    # def update_table_size(self):
+    #     print("\n", self.table_container.size())
+    #     available_width = self.table_container.width()
+    #     available_height = self.table_container.height()
+    #     print(self.table_container.width(), available_width, self.table_container.height(), available_height)
+    #
+    #     max_cell_width = available_width // 4
+    #     max_cell_height = available_height // 4
+    #     cell_size = min(max_cell_width, max_cell_height)
+    #
+    #     for i in range(self.table_layout.count()):
+    #         widget = self.table_layout.itemAt(i).widget()
+    #         if isinstance(widget, Cell):
+    #             # widget.setMinimumSize(cell_size, cell_size)
+    #             # widget.setMaximumSize(cell_size, cell_size)
+    #             widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+    #             # widget.resize(cell_size, cell_size)
+    #             # pass
 
     def update_numeric_layout(self):
-        self.numeric_frame.setGeometry(
-            self.table_layout.cellRect(0, 0).left(),
-            self.table_layout.cellRect(0, 0).top(),
-            self.table_layout.cellRect(3, 3).right() - self.table_layout.cellRect(0, 0).left(),
-            self.table_layout.cellRect(3, 3).bottom() - self.table_layout.cellRect(0, 0).top()
-        )
+        first_cell_rect = self.table_layout.cellRect(0, 0)
+        last_cell_rect = self.table_layout.cellRect(3, 3)
+
+        numeric_frame_width = last_cell_rect.right() - first_cell_rect.left() + first_cell_rect.width()
+        numeric_frame_height = last_cell_rect.bottom() - first_cell_rect.top() + first_cell_rect.height()
+
+        self.numeric_frame.setGeometry(first_cell_rect.left(), first_cell_rect.top(), numeric_frame_width,
+                                       numeric_frame_height)
 
         numeric_layout = QHBoxLayout(self.numeric_frame)
         numeric_layout.setContentsMargins(0, 0, 0, 0)
@@ -221,7 +251,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    app.setStyle('Fusion')  # Устанавливаем стиль приложения
+    app.setStyle('Fusion')
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
