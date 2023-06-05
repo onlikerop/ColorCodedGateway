@@ -24,14 +24,22 @@ def calculate_conditional_code():
         # Заполняем таблицу столбцами согласно условиям
         count = 0  # Счетчик для отслеживания текущего номера шлюза
         for j in range(4):
+            column_frame = tk.Frame(table_frame)  # Создаем фрейм для текущего столбца
+            column_frame.grid(row=0, column=j)
+
             # Вычисляем количество ячеек, которые нужно заполнить в текущем столбце
             cells_to_fill = min(gateway_number // values[j], 4)
             for i in range(cells_to_fill):
-                cell_label = tk.Label(table_frame, text=colors[j], width=10, height=2, relief='solid')
-                cell_label.grid(row=i, column=j)
+                cell_label = tk.Label(column_frame, text=colors[j], width=10, height=2, relief='solid')
+                cell_label.pack()
                 count += 1
                 if count == gateway_number:
                     break
+            if cells_to_fill < 4:  # Добавляем пустые ячейки, если меньше 4 ячеек заполнено
+                for _ in range(4 - cells_to_fill):
+                    empty_cell_label = tk.Label(column_frame, text='', width=10, height=2, relief='solid')
+                    empty_cell_label.pack()
+
             if cells_to_fill == 4:  # Переносим остаток в следующий столбец, если максимальное количество ячеек достигнуто
                 gateway_number -= cells_to_fill * values[j]
             else:
@@ -53,24 +61,26 @@ def calculate_conditional_code():
 window = tk.Tk()
 window.title('Условное обозначение')
 window.geometry('400x300')  # Устанавливаем размер окна
+window.resizable(False, False)  # Запрещаем изменение размера окна
 
 # Создаем метку и поле ввода для номера шлюза
-label = tk.Label(window, text='Введите номер шлюза:')
-label.pack()
+gateway_label = tk.Label(window, text='Номер шлюза:', width=20, height=2)
+gateway_label.pack()
 
 entry = tk.Entry(window, width=20)
 entry.pack()
 
-# Создаем кнопку для расчета условного обозначения
-button = tk.Button(window, text='Рассчитать', command=calculate_conditional_code)
-button.pack()
+# Создаем кнопку для расчета
+calculate_button = tk.Button(window, text='Рассчитать', command=calculate_conditional_code, width=20, height=2)
+calculate_button.pack()
 
-# Создаем метку для вывода ошибок
+# Создаем метку для вывода ошибки
 error_label = tk.Label(window, text='', fg='red')
 error_label.pack()
 
-# Создаем таблицу для отображения условного обозначения
+# Создаем фрейм для отображения условного обозначения
 table_frame = tk.Frame(window)
 table_frame.pack()
 
+# Запускаем основной цикл программы
 window.mainloop()
