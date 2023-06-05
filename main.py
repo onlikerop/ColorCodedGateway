@@ -1,8 +1,11 @@
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QWidget, QGridLayout, QRadioButton
+    QWidget, QGridLayout, QRadioButton, QSpinBox, QFrame
 from PyQt6.QtGui import QPainter, QColor, QBrush, QFont, QIcon, QPalette
 from PyQt6.QtCore import Qt, pyqtSignal, QObject
 import sys
+
+import logging
+from PyQt6 import QtGui
 
 
 class Cell(QWidget):
@@ -39,7 +42,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Color Coded Gateway')
-        self.setFixedSize(400, 400)
+        self.setFixedSize(350, 425)
 
         self.light_theme_color = '#FFFFFF'
         self.dark_theme_color = '#1C1E22'
@@ -49,37 +52,51 @@ class MainWindow(QMainWindow):
         self.setup_connections()
         self.toggle_theme()
 
+        # Инициализация логгера
+        logging.basicConfig(filename='gateway.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
     def setup_ui(self):
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
 
         input_layout = QHBoxLayout()
-        gateway_label = QLabel('Номер шлюза:')
-        self.entry = QLineEdit()
-        calculate_button = QPushButton('Рассчитать', objectName='calculateButton')
+        gateway_label = QLabel('Gateway Number:')
+        self.entry = QSpinBox()
+        self.entry.setRange(1, 264)  # Установите диапазон значений
+        self.entry.setValue(1)  # Установите значение по умолчанию
+        calculate_button = QPushButton('Calculate', objectName='calculateButton')
         self.error_label = QLabel()
+        self.error_label.setStyleSheet('color: red;')  # Цвет текста ошибки - красный
 
         input_layout.addWidget(gateway_label)
         input_layout.addWidget(self.entry)
         input_layout.addWidget(calculate_button)
 
-        self.table_layout = QGridLayout()
+        self.table_container = QFrame()  # Контейнер для таблицы
+        self.table_container.setFixedSize(320, 320)  # Устанавливаем фиксированную ширину и высоту
+        self.table_layout = QGridLayout(self.table_container)
+
         self.numeric_layout = QHBoxLayout()
         self.numeric_frame = QWidget()
 
         self.theme_switch_button = QPushButton('☀')
         self.theme_switch_button.setObjectName('themeSwitchButton')
+        self.theme_switch_button.setFixedSize(
+            self.theme_switch_button.fontMetrics().horizontalAdvance('☀'),
+            self.theme_switch_button.fontMetrics().height()
+        )
+        self.theme_switch_button.setStyleSheet('border: none;')
 
         theme_layout = QHBoxLayout()
-        theme_layout.addWidget(self.theme_switch_button)
         theme_layout.addStretch()
+        theme_layout.addWidget(self.theme_switch_button)
 
         main_layout.addLayout(input_layout)
         main_layout.addWidget(self.error_label)
-        main_layout.addLayout(self.table_layout)
-        main_layout.addWidget(self.numeric_frame)
         main_layout.addLayout(theme_layout)
+        main_layout.addWidget(self.table_container)
+        main_layout.addWidget(self.numeric_frame)
         main_layout.addStretch()
 
     def setup_connections(self):
@@ -91,7 +108,10 @@ class MainWindow(QMainWindow):
 
     def calculate_conditional_code(self):
         try:
-            gateway_number = int(self.entry.text())
+            gateway_number = self.entry.value()  # Получаем значение из QSpinBox
+
+            # Логгирование запроса
+            logging.info(f'Gateway calculation request: {gateway_number}')
 
             colors = ['#C00000', '#ED7D31', '#FFC000', '#00B050']
             values = [50, 10, 5, 1]
@@ -99,7 +119,7 @@ class MainWindow(QMainWindow):
             min_gateway_number = 1
             max_gateway_number = 264
             if gateway_number < min_gateway_number or gateway_number > max_gateway_number:
-                raise ValueError(f'Номер шлюза должен быть в диапазоне от {min_gateway_number} до {max_gateway_number}')
+                raise ValueError(f'Gateway number should be in the range of {min_gateway_number} to {max_gateway_number}')
 
             for i in reversed(range(self.table_layout.count())):
                 widget = self.table_layout.itemAt(i).widget()
@@ -109,6 +129,8 @@ class MainWindow(QMainWindow):
             for i in range(4):
                 for j in range(4):
                     empty_cell = Cell(self.empty_cell_color)
+                    empty_cell.setMinimumSize(80, 80)  # Устанавливаем минимальные размеры ячейки
+                    empty_cell.setMaximumSize(80, 80)  # Устанавливаем максимальные размеры ячейки
                     self.table_layout.addWidget(empty_cell, i, j)
 
             count = 0
@@ -118,6 +140,8 @@ class MainWindow(QMainWindow):
                 cells_to_fill = min(remaining_number // values[j], 4)
                 for i in range(4):
                     cell = Cell(colors[j], False) if i < cells_to_fill else Cell(self.empty_cell_color)
+                    cell.setMinimumSize(80, 80)  # Устанавливаем минимальные размеры ячейки
+                    cell.setMaximumSize(80, 80)  # Устанавливаем максимальные размеры ячейки
                     self.table_layout.addWidget(cell, i, j)
                     self.table_layout.setColumnMinimumWidth(j, 80)
                     self.table_layout.setRowMinimumHeight(i, 80)
@@ -129,8 +153,11 @@ class MainWindow(QMainWindow):
                     remaining_number = remaining_number % values[j]
 
             self.error_label.setText('')
+
         except ValueError as ve:
-            self.error_label.setText(f'Ошибка: {str(ve)}')
+            self.error_label.setText(f'Error: {str(ve)}')
+            # Логгирование ошибки
+            logging.error(f'Error occurred: {str(ve)}')
 
     def toggle_theme(self):
         is_dark_theme = self.theme_switch_button.text() == '☀'
@@ -171,13 +198,30 @@ class MainWindow(QMainWindow):
             self.table_layout.cellRect(3, 3).bottom() - self.table_layout.cellRect(0, 0).top()
         )
 
+        numeric_layout = QHBoxLayout(self.numeric_frame)
+        numeric_layout.setContentsMargins(0, 0, 0, 0)
+        numeric_layout.setSpacing(0)
+        numeric_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.apply_numeric_style()
+
+    def apply_numeric_style(self):
+        numeric_labels = self.numeric_frame.findChildren(QLabel, 'numericLabel')
+        for label in numeric_labels:
+            label.setFixedSize(
+                self.table_layout.columnMinimumWidth(0),
+                self.table_layout.rowMinimumHeight(0)
+            )
+            label.setStyleSheet('''
+                background-color: {0};
+                color: {1};
+                font-weight: bold;
+            '''.format(self.empty_cell_color, self.dark_theme_color))
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-
-    font = QFont("Arial", 12)
-    app.setFont(font)
-
+    app.setStyle('Fusion')  # Устанавливаем стиль приложения
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
