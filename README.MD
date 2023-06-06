@@ -43,4 +43,4 @@ Color Coded Gateway is a PyQt6-based application that allows users to encode and
 
 ## License
 
-This project is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0) - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0) - see the [LICENSE](LICENSE.MD) file for details.
