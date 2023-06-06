@@ -15,7 +15,12 @@ class Cell(QWidget):
         free (bool): Flag indicating whether the cell is free.
     """
 
-    def __init__(self, color, free=True, parent=None):
+    cellClicked = pyqtSignal()
+
+    colors = ['#C00000', '#ED7D31', '#FFC000', '#00B050']
+    values = [50, 10, 5, 1]
+
+    def __init__(self, color, position, free=True, parent=None):
         """
         Initialize the Cell object.
 
@@ -27,6 +32,7 @@ class Cell(QWidget):
         super().__init__(parent)
         self.color = color
         self.free = free
+        self.position = position
 
     def paintEvent(self, event):
         """
@@ -39,6 +45,71 @@ class Cell(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setBrush(QBrush(QColor(self.color)))
         painter.drawRect(self.rect())
+
+    def mousePressEvent(self, event):
+        self.cellClicked.emit()
+        event.accept()
+
+    def getColor(self):
+        """
+        Getter for the color of the cell.
+
+        Returns:
+            str: The current color of the cell.
+        """
+        return self.color
+
+    def setColor(self, new_value):
+        """
+        Setter for the color of the cell.
+
+        Args:
+            new_value (str): The new color of the cell.
+        """
+        self.color = new_value
+        self.update()
+
+    def getPosition(self, easy=False):
+        """
+        Getter for the position of the cell.
+
+        Returns:
+            list: The current position of the cell.
+        """
+        return self.position if not easy else [self.position[0] + 1, self.position[1] + 1]
+
+    def setPosition(self, new_value):
+        """
+        Setter for the position of the cell.
+
+        Args:
+            new_value (list): The new position of the cell.
+        """
+        self.position = new_value
+        self.update()
+
+    def isFree(self):
+        """
+        Getter for the free of the cell.
+
+        Returns:
+            bool: The current free of the cell.
+        """
+        return self.free
+
+    def setFree(self):
+        """
+        Setter for making cell free.
+        """
+        self.free = True
+        self.update()
+
+    def occupy(self):
+        """
+        Setter for making cell occupied.
+        """
+        self.free = False
+        self.update()
 
 
 class Gateway(QObject):
@@ -128,13 +199,16 @@ class MainWindow(QMainWindow):
         self.entry = QSpinBox()
         self.entry.setRange(1, 264)
         self.entry.setValue(1)
-        calculate_button = QPushButton('Calculate', objectName='calculateButton')
+        calculate_button = QPushButton('Encode', objectName='calculateButton')
+        calculate_port_button = QPushButton('Decode ', objectName='calculatePortButton')
         self.error_label = QLabel()
+        self.error_label.setWordWrap(True)
         self.error_label.setStyleSheet('color: red;')
 
         input_layout.addWidget(gateway_label)
         input_layout.addWidget(self.entry)
         input_layout.addWidget(calculate_button)
+        input_layout.addWidget(calculate_port_button)
 
         self.table_container = QFrame()
         table_container_layout = QVBoxLayout(self.table_container)
@@ -180,29 +254,35 @@ class MainWindow(QMainWindow):
 
         self.theme_switch_button.clicked.connect(self.toggle_theme)
 
+        # Connect the calculate_port_button to the calculate_port method
+        calculate_port_button = self.findChild(QPushButton, 'calculatePortButton')
+        if calculate_port_button:
+            calculate_port_button.clicked.connect(self.calculate_port)
+        for i in range(4):
+            for j in range(4):
+                cell = self.table_layout.itemAtPosition(i, j).widget()
+                if isinstance(cell, Cell):
+                    cell.cellClicked.connect(self.toggle_cell_color)
+
     def create_table(self):
         """
         Create an empty table for the code.
         """
         for i in range(4):
             for j in range(4):
-                empty_cell = Cell(self.empty_cell_color)
+                empty_cell = Cell(self.empty_cell_color, position=[i, j])
                 self.table_layout.addWidget(empty_cell, i, j)
             self.table_layout.setColumnMinimumWidth(i, 80)
             self.table_layout.setRowMinimumHeight(i, 80)
 
-
     def calculate_conditional_code(self):
         """
-        Handle the "Calculate" button click event.
+        Handle the "Encode" button click event.
         """
         try:
             gateway_number = self.entry.value()
 
             logging.info(f'Gateway calculation request: {gateway_number}')
-
-            colors = ['#C00000', '#ED7D31', '#FFC000', '#00B050']
-            values = [50, 10, 5, 1]
 
             min_gateway_number = 1
             max_gateway_number = 264
@@ -210,32 +290,82 @@ class MainWindow(QMainWindow):
                 raise ValueError(
                     f'Gateway number should be in the range of {min_gateway_number} to {max_gateway_number}')
 
-            for i in reversed(range(self.table_layout.count())):
-                widget = self.table_layout.itemAt(i).widget()
-                if widget:
-                    widget.setParent(None)
-
-            self.create_table()
-
             count = 0
             remaining_number = gateway_number
 
             for j in range(4):
-                cells_to_fill = min(remaining_number // values[j], 4)
+                cells_to_fill = min(remaining_number // Cell.values[j], 4)
                 for i in range(4):
-                    cell = Cell(colors[j], False) if i < cells_to_fill else Cell(self.empty_cell_color)
-                    self.table_layout.addWidget(cell, i, j)
+                    cell = self.table_layout.itemAtPosition(i, j).widget()
+                    if isinstance(cell, Cell):
+                        cell.setFree()
+                        cell.setColor(self.empty_cell_color)
+                    if i < cells_to_fill:
+                        if isinstance(cell, Cell):
+                            cell.setColor(Cell.colors[j])
+                            cell.occupy()
                     count += 1
 
                 if cells_to_fill == 4:
-                    remaining_number -= cells_to_fill * values[j]
+                    remaining_number -= cells_to_fill * Cell.values[j]
                 else:
-                    remaining_number = remaining_number % values[j]
+                    remaining_number = remaining_number % Cell.values[j]
 
             self.error_label.setText('')
         except ValueError as ve:
             self.error_label.setText(f'Error: {str(ve)}')
             logging.error(f'Error occurred: {str(ve)}')
+
+    def calculate_port(self):
+        """
+        Handle the "Decode" button click event.
+        """
+        try:
+            red_count = 0
+            yellow_count = 0
+            code = 0
+
+            for j in range(4):
+                for i in range(4):
+                    cell = self.table_layout.itemAtPosition(i, j)
+                    if cell:
+                        cell_widget = cell.widget()
+                        if isinstance(cell_widget, Cell):
+                            if not cell_widget.free:
+                                code += Cell.values[j]
+
+                            if i > 0 and not cell_widget.isFree():
+                                for k in range(i):
+                                    if self.table_layout.itemAtPosition(k, j).widget().isFree():
+                                        raise ValueError("Invalid cell marked at {}".format(cell_widget.getPosition(easy=True)))
+
+                            if cell_widget.getColor() == Cell.colors[2]:
+                                yellow_count += 1
+
+                            if cell_widget.getColor() == Cell.colors[0]:
+                                red_count += 1
+
+            if red_count != 4 and yellow_count > 1:
+                raise ValueError("More than one yellow cell with not all red cells are filled")
+
+            self.entry.setValue(code)
+            self.error_label.setText('')
+        except Exception as e:
+            self.error_label.setText(f'Error: {str(e)}')
+            logging.error(f'Error occurred: {str(e)}')
+
+    def toggle_cell_color(self):
+        sender = self.sender()
+        if isinstance(sender, Cell):
+            if sender.isFree():
+                column = sender.getPosition()[1]
+                color = Cell.colors[column]
+                sender.setColor(color)
+                sender.occupy()
+            else:
+                sender.setColor(self.empty_cell_color)
+                sender.setFree()
+            sender.update()
 
     def toggle_theme(self):
         """
