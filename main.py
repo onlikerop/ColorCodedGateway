@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QSpinBox, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, \
     QGridLayout, QFrame, QSizePolicy
-from PyQt6.QtGui import QPainter, QColor, QBrush
+from PyQt6.QtGui import QPainter, QColor, QBrush, QIcon
 from PyQt6.QtCore import Qt, pyqtSignal, QObject
 import sys
 import logging
@@ -186,6 +186,9 @@ class MainWindow(QMainWindow):
         logging.basicConfig(filename='gateway.log', level=logging.INFO,
                             format='%(asctime)s - %(levelname)s - %(message)s')
 
+        self.min_gateway_number = 1
+        self.max_gateway_number = 264
+
     def setup_ui(self):
         """
         Set up the user interface.
@@ -282,13 +285,11 @@ class MainWindow(QMainWindow):
         try:
             gateway_number = self.entry.value()
 
-            logging.info(f'Gateway calculation request: {gateway_number}')
+            logging.info(f'Gateway encoding request: {gateway_number}')
 
-            min_gateway_number = 1
-            max_gateway_number = 264
-            if gateway_number < min_gateway_number or gateway_number > max_gateway_number:
+            if gateway_number < self.min_gateway_number or gateway_number > self.max_gateway_number:
                 raise ValueError(
-                    f'Gateway number should be in the range of {min_gateway_number} to {max_gateway_number}')
+                    f'Gateway number should be in the range of {self.min_gateway_number} to {self.max_gateway_number}')
 
             count = 0
             remaining_number = gateway_number
@@ -322,6 +323,7 @@ class MainWindow(QMainWindow):
         """
         try:
             red_count = 0
+            orange_count = 0
             yellow_count = 0
             code = 0
 
@@ -342,12 +344,19 @@ class MainWindow(QMainWindow):
                             if cell_widget.getColor() == Cell.colors[2]:
                                 yellow_count += 1
 
+                            if cell_widget.getColor() == Cell.colors[1]:
+                                orange_count += 1
+
                             if cell_widget.getColor() == Cell.colors[0]:
                                 red_count += 1
 
-            if red_count != 4 and yellow_count > 1:
-                raise ValueError("More than one yellow cell with not all red cells are filled")
+            if (red_count != 4 or orange_count != 4) and yellow_count > 1:
+                raise ValueError("More than one yellow cell with not all red and orange cells are filled")
+            if code == 0:
+                raise ValueError(
+                    f'Gateway number should be in the range of {self.min_gateway_number} to {self.max_gateway_number}')
 
+            logging.info(f'Gateway decoding request: {code}')
             self.entry.setValue(code)
             self.error_label.setText('')
         except Exception as e:
@@ -457,6 +466,11 @@ class MainWindow(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
+
+    # Set application icon
+    app_icon = QIcon('materials/ico9-alpha.png')
+    app.setWindowIcon(app_icon)
+
     window = MainWindow()
     window.show()
     sys.exit(app.exec())

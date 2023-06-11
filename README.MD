@@ -31,7 +31,9 @@ Color Coded Gateway is a PyQt6-based application that allows users to encode and
 2. Run the application:
 `python main.py`
 
-3. Use the application to encode or decode gateway numbers using the color-coded table.
+3. Alternatively, you can download the executable files in the archive from the [latest release page](https://github.com/onlikerop/ColorCodedGateway/releases/latest), extract the files from the archive to any folder of your choice and run "Color Coded Gateway.exe".
+
+4. Use the application to encode or decode gateway numbers using the color-coded table.
 
 ## Author
 
